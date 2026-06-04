@@ -680,6 +680,16 @@ const micBtn = document.getElementById('mic-btn');
 const chat = document.getElementById('chat-wrap');
 const memList = document.getElementById('memory-list');
 const toolLog = document.getElementById('tool-log');
+// Poll for wake word every second
+setInterval(async () => {
+  try {
+    const res = await fetch('/wake-status');
+    const data = await res.json();
+    if (data.triggered && !isListening && !window.currentAudio) {
+      toggleListen();
+    }
+  } catch (e) {}
+}, 1000);
  
 // Build waveform bars
 for (let i = 0; i < 18; i++) {
@@ -760,18 +770,43 @@ function addMessage(role, text, agent = "aegis") {
   const label = role === 'user' ? 'YOU' : style.label;
   const color = role === 'user' ? 'rgba(255,255,255,0.4)' : style.color;
 
-  const formatted = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
-    return `<pre style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:4px;padding:12px;margin:8px 0;overflow-x:auto;font-family:'Courier New',monospace;font-size:0.75rem;line-height:1.5;color:#00ff88;white-space:pre;">${code.trim()}</pre>`;
-  });
-
   div.innerHTML = `
     <div class="msg-label" style="color:${color}">${label}</div>
-    <div class="msg-text" style="color:${color};text-shadow:0 0 10px ${color}33">${formatted}</div>
+    <div class="msg-text" style="color:${color};text-shadow:0 0 10px ${color}33"></div>
   `;
   chat.appendChild(div);
   chat.scrollTop = chat.scrollHeight;
   msgCount++;
   document.getElementById('mem-count').textContent = msgCount + ' ENTRIES';
+
+  const msgText = div.querySelector('.msg-text');
+
+  if (role === 'user') {
+    msgText.textContent = text;
+    return;
+  }
+
+  // Check for code blocks first — render them instantly, type the rest
+  if (text.includes('```')) {
+    const formatted = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
+      return `<pre style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:4px;padding:12px;margin:8px 0;overflow-x:auto;font-family:'Courier New',monospace;font-size:0.75rem;line-height:1.5;color:#00ff88;white-space:pre;">${code.trim()}</pre>`;
+    });
+    msgText.innerHTML = formatted;
+    return;
+  }
+
+  // Typing effect for normal text
+  let i = 0;
+  const speed = 18; // ms per character — lower = faster
+  function type() {
+    if (i < text.length) {
+      msgText.textContent += text.charAt(i);
+      i++;
+      chat.scrollTop = chat.scrollHeight;
+      setTimeout(type, speed);
+    }
+  }
+  type();
 }
  
 function setConfidence(pct) {
@@ -860,7 +895,6 @@ async function sendToServer(formData) {
 }
  
 async function toggleListen() {
-  // If speaking, stop audio and start listening
   if (window.currentAudio) {
     window.currentAudio.pause();
     window.currentAudio = null;
@@ -872,26 +906,59 @@ async function toggleListen() {
     isListening = false;
     return;
   }
-  try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    mediaRecorder = new MediaRecorder(stream);
-    audioChunks = [];
-    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-    mediaRecorder.onstop = async () => {
-      const blob = new Blob(audioChunks, { type: 'audio/webm' });
-      const formData = new FormData();
-      formData.append('audio', blob, 'audio.webm');
-      if (selectedFile) formData.append('file', selectedFile);
-      stream.getTracks().forEach(t => t.stop());
-      await sendToServer(formData);
-    };
-    mediaRecorder.start();
-    isListening = true;
-    setOrbState('listening');
-    addLog('MICROPHONE ACTIVE');
-  } catch (err) {
-    statusText.textContent = 'MIC ACCESS DENIED';
-  }
+
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  mediaRecorder = new MediaRecorder(stream);
+  audioChunks = [];
+
+  // Silence detection
+  const audioCtx = new AudioContext();
+  const source = audioCtx.createMediaStreamSource(stream);
+  const analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 512;
+  source.connect(analyser);
+
+  const dataArray = new Uint8Array(analyser.frequencyBinCount);
+  let silenceStart = null;
+  let hasSpoken = false;
+  const SILENCE_THRESHOLD = 20;
+  const SILENCE_DELAY = 1500; // ms of silence before stopping
+
+  const silenceChecker = setInterval(() => {
+    analyser.getByteFrequencyData(dataArray);
+    const volume = dataArray.reduce((a, b) => a + b) / dataArray.length;
+
+    if (volume > SILENCE_THRESHOLD) {
+      hasSpoken = true;
+      silenceStart = null;
+    } else if (hasSpoken) {
+      if (!silenceStart) silenceStart = Date.now();
+      if (Date.now() - silenceStart > SILENCE_DELAY) {
+        clearInterval(silenceChecker);
+        if (isListening) {
+          mediaRecorder.stop();
+          isListening = false;
+        }
+      }
+    }
+  }, 100);
+
+  mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+  mediaRecorder.onstop = async () => {
+    clearInterval(silenceChecker);
+    audioCtx.close();
+    const blob = new Blob(audioChunks, { type: 'audio/webm' });
+    const formData = new FormData();
+    formData.append('audio', blob, 'audio.webm');
+    if (selectedFile) formData.append('file', selectedFile);
+    stream.getTracks().forEach(t => t.stop());
+    await sendToServer(formData);
+  };
+
+  mediaRecorder.start();
+  isListening = true;
+  setOrbState('listening');
+  addLog('MICROPHONE ACTIVE');
 }
  
 async function sendText() {

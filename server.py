@@ -5,16 +5,19 @@ from brain.llm import chat
 from memory.remember import save_memory
 from tools.executor import execute_tool
 from tools.file_writer import save_text_file, save_docx, save_pdf, save_markdown, OUTPUT_DIR
+from voice.wakeword import start_wake_word_listener
 import subprocess
 import tempfile
 import os
 import json
 import base64
 import fitz
-
-uploaded_file_cache = {}
+import threading
 
 app = FastAPI()
+
+wake_triggered = False
+uploaded_file_cache = {}
 
 PIPER_EXE = r"C:\piper\piper\piper.exe"
 PIPER_MODEL = r"C:\piper\piper\voices\en_US-lessac-medium.onnx"
@@ -27,6 +30,24 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 @app.get("/")
 def root():
     return FileResponse("static/index.html")
+
+@app.get("/wake-status")
+async def wake_status():
+    global wake_triggered
+    triggered = wake_triggered
+    wake_triggered = False
+    return JSONResponse({"triggered": triggered})
+
+@app.on_event("startup")
+async def startup():
+    def on_wake_word():
+        global wake_triggered
+        wake_triggered = True
+    threading.Thread(
+        target=start_wake_word_listener,
+        args=(on_wake_word,),
+        daemon=True
+    ).start()
 
 def extract_file_content(file_bytes: bytes, filename: str) -> str:
     ext = filename.lower().split(".")[-1]
@@ -60,18 +81,15 @@ def clean_reply(reply: str) -> str:
     if "{" in reply:
         try:
             start = reply.index("{")
-            # Try full parse first
             try:
                 end = reply.rindex("}") + 1
                 parsed = json.loads(reply[start:end])
                 return parsed.get("reply", reply)
             except Exception:
                 pass
-            # If truncated, extract reply field manually
             if '"reply":' in reply:
                 after = reply.split('"reply":')[1].strip()
                 if after.startswith('"'):
-                    # Extract until end of string
                     content = after[1:]
                     end_idx = content.find('"')
                     if end_idx > 0:
@@ -81,7 +99,6 @@ def clean_reply(reply: str) -> str:
     return reply
 
 def generate_tts(text: str) -> str:
-    """Generate speech and return base64 encoded audio."""
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as out:
         out_path = out.name
     subprocess.run([
@@ -98,7 +115,6 @@ async def chat_endpoint(
     file: UploadFile = File(None),
     text: str = Form(None)
 ):
-    # ── Voice transcription ──
     if audio:
         import whisper
         with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
@@ -117,7 +133,6 @@ async def chat_endpoint(
     else:
         user_input = text or ""
 
-    # ── File handling ──
     if file and file.filename:
         file_bytes = await file.read()
         file_context = extract_file_content(file_bytes, file.filename)
@@ -131,26 +146,22 @@ async def chat_endpoint(
     if not user_input.strip():
         return JSONResponse({"error": "No input received."})
 
-    # ── LLM ──
     tool, argument, reply, agent = chat(user_input)
+    print(f"DEBUG — agent: {agent}, tool: {tool}, argument: {argument}")
     reply = clean_reply(reply)
 
-    # ── Tool execution ──
     file_path = None
     if tool and tool != "none":
-        # If save tool but argument is empty, use the reply as content
-        if tool in ["save_txt", "save_docx", "save_pdf"] and not argument.strip():
-            argument = reply
         result = execute_tool(tool, argument)
         if tool in ["save_txt", "save_docx", "save_pdf"]:
             file_path = result.replace("Saved to ", "").strip()
+        elif tool in ["get_weather", "get_weather_detailed"]:
+            reply = result
 
     save_memory(user_input[:200], reply)
 
-    # ── TTS ──
     audio_b64 = generate_tts(reply)
-
-    display_input = user_input.split("\n\n[")[0]  # hide file content from chat
+    display_input = user_input.split("\n\n[")[0]
 
     return JSONResponse({
         "user": display_input[:300],

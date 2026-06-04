@@ -18,6 +18,7 @@ CRITICAL RULES:
 - "play [song/artist]" ALWAYS means use the play_song tool. Never use current_track for play commands.
 - If the user says ONLY "play [song]", ALWAYS use play_song immediately.
 - If the previous message was about a song and the user says "play [song]", they want to change the song.
+- NEVER use search_web for weather questions. ALWAYS use get_weather or get_weather_detailed tools instead.
 
 You have access to the following tools:
 - open_app: Opens an application.
@@ -34,6 +35,8 @@ You have access to the following tools:
 - save_docx: Saves a Word document. Argument = ONLY the raw content, no preamble.
 - save_pdf: Saves a PDF. Argument = ONLY the raw content, no preamble.
 - none: No tool needed, just reply normally.
+- get_weather: Gets current weather. Argument = city name. Use for "what's the weather", "is it raining", "how cold is it".
+- get_weather_detailed: Gets detailed weather info. Use for "detailed weather", "full forecast".
 
 You must ALWAYS respond in this exact JSON format:
 {
@@ -76,7 +79,7 @@ def chat(user_message: str) -> tuple[str, str, str, str]:
         reply = security_analysis(user_message)
         return "none", "", reply, "security"
 
-    # Default: Jarvis handles it with tool calling
+    # Default: Aegis handles it with tool calling
     conversation_history.append({
         "role": "user",
         "content": user_message
@@ -109,4 +112,4 @@ def chat(user_message: str) -> tuple[str, str, str, str]:
         argument = ""
         reply = raw
 
-    return tool, argument, reply, "jarvis"
+    return tool, argument, reply, "aegis"

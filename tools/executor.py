@@ -1,6 +1,7 @@
 import os
 import subprocess
 import webbrowser
+from tools.weather import get_weather, get_weather_detailed
 from datetime import datetime
 from tools.spotify import play_song, pause_music, next_track, previous_track, current_track
 from vision.screen import analyse_screen
@@ -71,5 +72,9 @@ def execute_tool(tool: str, argument: str = "") -> str:
     elif tool == "save_pdf":
         path = save_pdf(argument)
         return f"Saved to {path}"
+    elif tool == "get_weather":
+        return get_weather(argument)
+    elif tool == "get_weather_detailed":
+        return get_weather_detailed(argument)
     else:
         return ""
