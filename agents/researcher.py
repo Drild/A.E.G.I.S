@@ -3,7 +3,7 @@ from ddgs import DDGS
 import time
 
 RESEARCHER_PROMPT = """
-You are the Researcher Agent for Jarvis. Your job is to find accurate, up-to-date information.
+You are the Researcher Agent for Aegis. Your job is to find accurate, up-to-date information.
 You are knowledgeable about science, technology, history, current events, and more.
 If given search results, synthesise them into a clear answer.
 If no search results are available, answer from your own knowledge.

@@ -36,7 +36,7 @@ def get_time() -> str:
     return f"It's {now.strftime('%I:%M %p')} on {now.strftime('%A, %B %d')}."
 
 def write_note(content: str) -> str:
-    path = os.path.join(os.path.expanduser("~"), "jarvis_notes.txt")
+    path = os.path.join(os.path.expanduser("~"), "aegis_notes.txt")
     with open(path, "a") as f:
         f.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M')}] {content}\n")
     return "Note saved."

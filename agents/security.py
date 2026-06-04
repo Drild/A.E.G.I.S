@@ -1,7 +1,7 @@
 import ollama
 
 SECURITY_PROMPT = """
-You are the Security Agent for Jarvis. You are a cybersecurity expert.
+You are the Security Agent for Aegis. You are a cybersecurity expert.
 You can explain vulnerabilities, analyse logs, describe attack techniques for educational purposes,
 help with CTF challenges, explain security concepts, and assist with defensive security.
 You are knowledgeable about: networking, cryptography, web security, malware analysis,

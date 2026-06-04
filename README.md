@@ -1,5 +1,5 @@
-# J.A.R.V.I.S
-### Just A Rather Very Intelligent System
+# A.E.G.I.S
+### AUTONOMOUS EXPERT GUARDIAN INTELLIGENCE SYSTEM
 
 A fully local, multi-agent AI assistant with voice interaction, Spotify control, screen vision, file generation, and real-time code execution. Built entirely in Python, running on-device with no cloud API costs.
 
@@ -75,7 +75,7 @@ Piper TTS → Audio Response
 ```bash
 # Clone the repo
 git clone https://github.com/Drild/jarvis.git
-cd jarvis
+cd aegis
 
 # Create virtual environment
 python -m venv venv
@@ -111,7 +111,7 @@ Open `http://localhost:8000` in your browser.
 
 ## Project Structure
 
-jarvis/
+aegis/
 ├── server.py          # FastAPI backend
 ├── main.py            # Terminal interface
 ├── brain/

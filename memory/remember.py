@@ -4,11 +4,11 @@ from datetime import datetime
 import uuid
 
 client = chromadb.PersistentClient(path="./memory/db")
-collection = client.get_or_create_collection(name="jarvis_memory")
+collection = client.get_or_create_collection(name="aegis_memory")
 embedder = SentenceTransformer("all-MiniLM-L6-v2")
 
-def save_memory(user_message: str, jarvis_reply: str):
-    text = f"User: {user_message}\nJarvis: {jarvis_reply}"
+def save_memory(user_message: str, aegis_reply: str):
+    text = f"User: {user_message}\nAegis: {aegis_reply}"
     embedding = embedder.encode(text).tolist()
     collection.add(
         documents=[text],

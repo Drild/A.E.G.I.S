@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>JARVIS</title>
+<title>AEGIS</title>
 <style>
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
  
@@ -339,7 +339,7 @@ html, body {
   align-self: flex-end;
 }
  
-.msg.jarvis .msg-text {
+.msg.aegis .msg-text {
   color: var(--cyan);
   background: rgba(0,212,255,0.04);
   border: 1px solid rgba(0,212,255,0.1);
@@ -546,7 +546,7 @@ html, body {
  
   <!-- TOP BAR -->
   <div id="topbar">
-    <div id="logo">J.A.R.V.I.S</div>
+    <div id="logo">A.E.G.I.S</div>
     <div id="topbar-center">
       <span>SYSTEM ONLINE</span>
       <span>|</span>
@@ -714,8 +714,8 @@ function setOrbState(state) {
     waveform.classList.remove('active');
   } else if (state === 'speaking') {
     orbLabel.textContent = 'SPEAKING';
-    orbIcon.textContent = 'JARVIS LIVE';
-    statusText.textContent = 'JARVIS SPEAKING...';
+    orbIcon.textContent = 'AEGIS LIVE';
+    statusText.textContent = 'AEGIS SPEAKING...';
     waveform.classList.add('active');
   } else {
     orbLabel.textContent = 'ACTIVATE';
@@ -735,7 +735,7 @@ function addLog(text) {
 }
  
 const AGENT_STYLES = {
-  jarvis:     { label: "JARVIS",      color: "#00d4ff" },
+  aegis:     { label: "AEGIS",      color: "#00d4ff" },
   researcher: { label: "RESEARCHER",  color: "#00ff88" },
   writer:     { label: "WRITER",      color: "#ffd700" },
   coder:      { label: "CODER",       color: "#ff8c00" },
@@ -743,7 +743,7 @@ const AGENT_STYLES = {
   security:   { label: "SECURITY",    color: "#ff2d55" },
 };
 
-function addMessage(role, text, agent = "jarvis") {
+function addMessage(role, text, agent = "aegis") {
   if (memList.children.length === 1 && memList.children[0].textContent === 'No memories yet...') {
     memList.innerHTML = '';
   }
@@ -756,7 +756,7 @@ function addMessage(role, text, agent = "jarvis") {
   const div = document.createElement('div');
   div.className = `msg ${role}`;
 
-  const style = AGENT_STYLES[agent] || AGENT_STYLES.jarvis;
+  const style = AGENT_STYLES[agent] || AGENT_STYLES.aegis;
   const label = role === 'user' ? 'YOU' : style.label;
   const color = role === 'user' ? 'rgba(255,255,255,0.4)' : style.color;
 
@@ -809,7 +809,7 @@ async function sendToServer(formData) {
     const data = await res.json();
 
     if (data.error) {
-      addMessage('jarvis', 'Error: ' + data.error);
+      addMessage('aegis', 'Error: ' + data.error);
       setOrbState('');
       return;
     }
@@ -817,8 +817,8 @@ async function sendToServer(formData) {
     if (data.user) addMessage('user', data.user);
 
     if (data.reply) {
-      addMessage('jarvis', data.reply, data.agent || 'jarvis');
-      addLog('AGENT: ' + (data.agent || 'jarvis').toUpperCase());
+      addMessage('aegis', data.reply, data.agent || 'aegis');
+      addLog('AGENT: ' + (data.agent || 'aegis').toUpperCase());
       setConfidence(Math.floor(75 + Math.random() * 20));
     }
 
@@ -853,7 +853,7 @@ async function sendToServer(formData) {
     }
 
   } catch (err) {
-    addMessage('jarvis', 'Connection error. Is the server running?');
+    addMessage('aegis', 'Connection error. Is the server running?');
     addLog('ERROR: CONNECTION FAILED');
     setOrbState('');
   }

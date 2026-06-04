@@ -8,7 +8,7 @@ from agents.coder import code
 from agents.security import security_analysis
 
 SYSTEM_PROMPT = """
-You are Jarvis, a highly capable personal AI assistant.
+You are Aegis, a highly capable personal AI assistant.
 You are concise, intelligent, and helpful.
 
 CRITICAL RULES:
