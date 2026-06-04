@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JARVIS</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+ 
+:root {
+  --cyan: #00d4ff;
+  --cyan-dim: rgba(0,212,255,0.15);
+  --cyan-glow: rgba(0,212,255,0.4);
+  --red: #ff2d55;
+  --green: #00ff88;
+  --bg: #020408;
+  --panel: rgba(0,212,255,0.04);
+  --border: rgba(0,212,255,0.12);
+}
+ 
+html, body {
+  width: 100%; height: 100%;
+  background: var(--bg) !important;
+  color: var(--cyan) !important;
+  font-family: 'Courier New', monospace !important;
+  overflow: hidden;
+}
+ 
+#app {
+  display: grid;
+  grid-template-columns: 260px 1fr 260px;
+  grid-template-rows: 60px 1fr 120px;
+  height: 100vh;
+  gap: 0;
+}
+ 
+/* ── TOP BAR ── */
+#topbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.6);
+}
+ 
+#logo {
+  font-size: 1.1rem;
+  letter-spacing: 0.6rem;
+  text-shadow: 0 0 20px var(--cyan);
+  font-weight: bold;
+}
+ 
+#topbar-center {
+  display: flex;
+  gap: 24px;
+  font-size: 0.6rem;
+  letter-spacing: 0.2rem;
+  opacity: 0.5;
+}
+ 
+#topbar-right {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+ 
+.status-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: blink 2s infinite;
+}
+ 
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+ 
+#clock {
+  font-size: 0.7rem;
+  letter-spacing: 0.15rem;
+  opacity: 0.7;
+}
+ 
+/* ── LEFT PANEL ── */
+#left-panel {
+  grid-row: 2;
+  border-right: 1px solid var(--border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+}
+ 
+.panel-section { display: flex; flex-direction: column; gap: 8px; }
+ 
+.panel-label {
+  font-size: 0.55rem;
+  letter-spacing: 0.25rem;
+  opacity: 0.4;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+ 
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.65rem;
+  letter-spacing: 0.1rem;
+  padding: 4px 0;
+}
+ 
+.stat-val { opacity: 0.9; }
+.stat-key { opacity: 0.4; }
+ 
+.bar-wrap {
+  height: 2px;
+  background: rgba(0,212,255,0.1);
+  border-radius: 1px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+ 
+.bar-fill {
+  height: 100%;
+  background: var(--cyan);
+  border-radius: 1px;
+  transition: width 1s ease;
+  box-shadow: 0 0 6px var(--cyan);
+}
+ 
+#tool-log {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow: hidden;
+}
+ 
+.log-item {
+  font-size: 0.58rem;
+  letter-spacing: 0.08rem;
+  opacity: 0.5;
+  padding: 3px 6px;
+  border-left: 2px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+ 
+.log-item.active {
+  opacity: 0.9;
+  border-left-color: var(--cyan);
+  color: var(--cyan);
+}
+ 
+/* ── CENTER ── */
+#center {
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+ 
+/* Radar rings */
+.ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(0,212,255,0.06);
+  pointer-events: none;
+}
+ 
+#orb-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 28px;
+}
+ 
+#orb {
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(0,212,255,0.3);
+  background: radial-gradient(circle at 38% 35%, rgba(0,212,255,0.08), transparent 70%);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 4px;
+  transition: all 0.4s ease;
+  position: relative;
+  z-index: 2;
+  user-select: none;
+}
+ 
+#orb:hover { border-color: rgba(0,212,255,0.6); }
+ 
+#orb-label {
+  font-size: 0.65rem;
+  letter-spacing: 0.3rem;
+  opacity: 0.7;
+}
+ 
+#orb-icon {
+  font-size: 0.5rem;
+  letter-spacing: 0.2rem;
+  opacity: 0.3;
+}
+ 
+/* Orbiting dot */
+.orbit-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(0,212,255,0.15);
+  pointer-events: none;
+}
+ 
+.orbit-dot {
+  position: absolute;
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--cyan);
+  box-shadow: 0 0 8px var(--cyan);
+  top: -2.5px;
+  left: 50%;
+  transform: translateX(-50%);
+  transform-origin: 50% calc(50% + var(--r));
+}
+ 
+#orb.listening {
+  border-color: rgba(255,45,85,0.7);
+  background: radial-gradient(circle at 38% 35%, rgba(255,45,85,0.08), transparent 70%);
+  animation: orb-pulse-red 1.2s infinite;
+}
+ 
+#orb.speaking {
+  border-color: rgba(0,255,136,0.7);
+  background: radial-gradient(circle at 38% 35%, rgba(0,255,136,0.08), transparent 70%);
+  animation: orb-pulse-green 0.8s infinite;
+}
+ 
+#orb.thinking {
+  border-color: rgba(0,212,255,0.5);
+  animation: orb-spin 2s linear infinite;
+}
+ 
+@keyframes orb-pulse-red {
+  0%,100% { box-shadow: 0 0 20px rgba(255,45,85,0.2); }
+  50% { box-shadow: 0 0 40px rgba(255,45,85,0.5); }
+}
+ 
+@keyframes orb-pulse-green {
+  0%,100% { box-shadow: 0 0 20px rgba(0,255,136,0.2); }
+  50% { box-shadow: 0 0 40px rgba(0,255,136,0.5); }
+}
+ 
+@keyframes orb-spin {
+  0% { box-shadow: 0 0 20px rgba(0,212,255,0.3), 6px -6px 0 -2px rgba(0,212,255,0.4) inset; }
+  100% { box-shadow: 0 0 20px rgba(0,212,255,0.3), -6px 6px 0 -2px rgba(0,212,255,0.4) inset; }
+}
+ 
+/* Waveform */
+#waveform {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: 32px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+ 
+#waveform.active { opacity: 1; }
+ 
+.wave-bar {
+  width: 3px;
+  background: var(--cyan);
+  border-radius: 2px;
+  animation: wave 0.8s ease-in-out infinite;
+  box-shadow: 0 0 4px var(--cyan);
+}
+ 
+@keyframes wave {
+  0%,100% { height: 4px; }
+  50% { height: 24px; }
+}
+ 
+#status-text {
+  font-size: 0.6rem;
+  letter-spacing: 0.3rem;
+  opacity: 0.4;
+  margin-top: 8px;
+  min-height: 1rem;
+  text-align: center;
+}
+ 
+/* ── CHAT ── */
+#chat-wrap {
+  width: 100%;
+  max-width: 520px;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+ 
+#chat-wrap::-webkit-scrollbar { width: 2px; }
+#chat-wrap::-webkit-scrollbar-track { background: transparent; }
+#chat-wrap::-webkit-scrollbar-thumb { background: rgba(0,212,255,0.2); }
+ 
+.msg { display: flex; flex-direction: column; gap: 2px; max-width: 100%; }
+ 
+.msg-label {
+  font-size: 0.5rem;
+  letter-spacing: 0.2rem;
+  opacity: 0.3;
+}
+ 
+.msg-text {
+  font-size: 0.78rem;
+  line-height: 1.55;
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+ 
+.msg.user .msg-text {
+  color: rgba(255,255,255,0.6);
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  align-self: flex-end;
+}
+ 
+.msg.jarvis .msg-text {
+  color: var(--cyan);
+  background: rgba(0,212,255,0.04);
+  border: 1px solid rgba(0,212,255,0.1);
+}
+ 
+/* ── RIGHT PANEL ── */
+#right-panel {
+  grid-row: 2;
+  border-left: 1px solid var(--border);
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow: hidden;
+}
+ 
+#memory-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  overflow: hidden;
+}
+ 
+.mem-item {
+  font-size: 0.6rem;
+  letter-spacing: 0.05rem;
+  opacity: 0.45;
+  line-height: 1.4;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+ 
+.capability {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.6rem;
+  letter-spacing: 0.08rem;
+  opacity: 0.5;
+  padding: 4px 0;
+}
+ 
+.cap-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--cyan);
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+ 
+.cap-dot.on { background: var(--green); box-shadow: 0 0 4px var(--green); opacity: 1; }
+ 
+/* ── BOTTOM BAR ── */
+#bottom {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px;
+  background: rgba(0,0,0,0.5);
+}
+ 
+#input-wrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0,212,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0 14px;
+  height: 44px;
+}
+ 
+#input-wrap:focus-within { border-color: rgba(0,212,255,0.3); }
+ 
+#textinput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: rgba(255,255,255,0.8);
+  font-family: 'Courier New', monospace;
+  font-size: 0.8rem;
+  letter-spacing: 0.05rem;
+}
+ 
+#textinput::placeholder { color: rgba(0,212,255,0.25); }
+ 
+#upload-btn {
+  background: transparent;
+  border: none;
+  color: rgba(0,212,255,0.35);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 4px;
+  transition: color 0.2s;
+  display: flex;
+  align-items: center;
+}
+ 
+#upload-btn:hover { color: var(--cyan); }
+ 
+#file-input { display: none; }
+ 
+.btn {
+  height: 44px;
+  padding: 0 20px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--cyan);
+  font-family: 'Courier New', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.15rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+ 
+.btn:hover { background: rgba(0,212,255,0.06); border-color: rgba(0,212,255,0.3); }
+.btn:active { transform: scale(0.98); }
+ 
+#mic-btn {
+  width: 44px; height: 44px; padding: 0;
+  justify-content: center;
+  font-size: 1rem;
+}
+ 
+#mic-btn.listening {
+  border-color: rgba(255,45,85,0.5);
+  color: var(--red);
+  background: rgba(255,45,85,0.06);
+  animation: blink 0.8s infinite;
+}
+ 
+#file-preview {
+  font-size: 0.6rem;
+  letter-spacing: 0.1rem;
+  color: var(--green);
+  opacity: 0;
+  transition: opacity 0.3s;
+  white-space: nowrap;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+ 
+#file-preview.show { opacity: 1; }
+ 
+/* Corner decorations */
+.corner {
+  position: fixed;
+  width: 20px; height: 20px;
+  pointer-events: none;
+  opacity: 0.3;
+}
+.corner::before, .corner::after {
+  content: '';
+  position: absolute;
+  background: var(--cyan);
+}
+.corner::before { width: 100%; height: 1px; top: 0; }
+.corner::after { width: 1px; height: 100%; }
+.corner.tl { top: 8px; left: 8px; }
+.corner.tr { top: 8px; right: 8px; transform: scaleX(-1); }
+.corner.bl { bottom: 8px; left: 8px; transform: scaleY(-1); }
+.corner.br { bottom: 8px; right: 8px; transform: scale(-1); }
+ 
+/* Scan line */
+@keyframes scan {
+  0% { top: 0; }
+  100% { top: 100%; }
+}
+#scanline {
+  position: fixed;
+  left: 0; width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.06), transparent);
+  pointer-events: none;
+  animation: scan 8s linear infinite;
+}
+</style>
+</head>
+<body>
+ 
+<div id="scanline"></div>
+<div class="corner tl"></div>
+<div class="corner tr"></div>
+<div class="corner bl"></div>
+<div class="corner br"></div>
+ 
+<div id="app">
+ 
+  <!-- TOP BAR -->
+  <div id="topbar">
+    <div id="logo">J.A.R.V.I.S</div>
+    <div id="topbar-center">
+      <span>SYSTEM ONLINE</span>
+      <span>|</span>
+      <span>LOCAL INFERENCE</span>
+      <span>|</span>
+      <span>GPU ACCELERATED</span>
+    </div>
+    <div id="topbar-right">
+      <div class="status-dot"></div>
+      <div id="clock">--:--:--</div>
+    </div>
+  </div>
+ 
+  <!-- LEFT PANEL -->
+  <div id="left-panel">
+    <div class="panel-section">
+      <div class="panel-label">SYSTEM METRICS</div>
+      <div class="stat-row"><span class="stat-key">MODEL</span><span class="stat-val">LLAMA 3.2</span></div>
+      <div class="stat-row"><span class="stat-key">INFERENCE</span><span class="stat-val">GPU</span></div>
+      <div class="stat-row"><span class="stat-key">STT</span><span class="stat-val">WHISPER SM</span></div>
+      <div class="stat-row"><span class="stat-key">TTS</span><span class="stat-val">PIPER</span></div>
+      <div class="stat-row"><span class="stat-key">MEMORY</span><span class="stat-val" id="mem-count">0 ENTRIES</span></div>
+    </div>
+ 
+    <div class="panel-section">
+      <div class="panel-label">CONFIDENCE</div>
+      <div class="stat-row"><span class="stat-key">RESPONSE</span><span class="stat-val" id="conf-pct">--</span></div>
+      <div class="bar-wrap"><div class="bar-fill" id="conf-bar" style="width:0%"></div></div>
+    </div>
+ 
+    <div class="panel-section" style="flex:1">
+      <div class="panel-label">ACTIVITY LOG</div>
+      <div id="tool-log">
+        <div class="log-item">SYSTEM INITIALISED</div>
+        <div class="log-item">MEMORY DB LOADED</div>
+        <div class="log-item">VOICE MODULE READY</div>
+        <div class="log-item">AWAITING INPUT...</div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- CENTER -->
+  <div id="center">
+    <!-- Radar rings -->
+    <div class="ring" style="width:320px;height:320px;top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+    <div class="ring" style="width:440px;height:440px;top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+    <div class="ring" style="width:560px;height:560px;top:50%;left:50%;transform:translate(-50%,-50%)"></div>
+ 
+    <div id="orb-wrap">
+      <!-- Orbit ring -->
+      <div class="orbit-ring" style="width:220px;height:220px;--r:110px">
+        <div class="orbit-dot" style="animation:orbit1 4s linear infinite"></div>
+      </div>
+      <div class="orbit-ring" style="width:260px;height:260px;--r:130px">
+        <div class="orbit-dot" style="animation:orbit2 7s linear infinite reverse;background:rgba(0,212,255,0.4)"></div>
+      </div>
+ 
+      <div id="orb" onclick="toggleListen()">
+        <div id="orb-label">ACTIVATE</div>
+        <div id="orb-icon">CLICK TO SPEAK</div>
+      </div>
+    </div>
+ 
+    <div id="waveform"></div>
+    <div id="status-text">STANDBY</div>
+ 
+    <div id="chat-wrap"></div>
+  </div>
+ 
+  <!-- RIGHT PANEL -->
+  <div id="right-panel">
+    <div class="panel-section">
+      <div class="panel-label">CAPABILITIES</div>
+      <div class="capability"><div class="cap-dot on"></div>VOICE INPUT</div>
+      <div class="capability"><div class="cap-dot on"></div>VOICE OUTPUT</div>
+      <div class="capability"><div class="cap-dot on"></div>TOOL CALLING</div>
+      <div class="capability"><div class="cap-dot on"></div>MEMORY</div>
+      <div class="capability"><div class="cap-dot on"></div>SCREEN VISION</div>
+      <div class="capability"><div class="cap-dot on"></div>SPOTIFY</div>
+      <div class="capability"><div class="cap-dot" id="cap-file"></div>FILE UPLOAD</div>
+    </div>
+ 
+    <div class="panel-section" style="flex:1">
+      <div class="panel-label">RECENT CONTEXT</div>
+      <div id="memory-list">
+        <div class="mem-item">No memories yet...</div>
+      </div>
+    </div>
+  </div>
+ 
+  <!-- BOTTOM -->
+  <div id="bottom">
+    <button id="mic-btn" class="btn" onclick="toggleListen()" title="Voice input">🎤</button>
+ 
+    <div id="input-wrap">
+      <input id="textinput" type="text" placeholder="ENTER COMMAND..." autocomplete="off"
+        onkeydown="if(event.key==='Enter') sendText()">
+      <button id="upload-btn" onclick="document.getElementById('file-input').click()" title="Upload file">📎</button>
+      <input id="file-input" type="file" accept=".pdf,.png,.jpg,.jpeg,.txt" onchange="handleFileSelect(this)">
+      <span id="file-preview"></span>
+    </div>
+ 
+    <button class="btn" onclick="sendText()">SEND ▶</button>
+    <button class="btn" onclick="clearChat()" style="opacity:0.5">CLR</button>
+  </div>
+ 
+</div>
+ 
+<style>
+@keyframes orbit1 {
+  from { transform: translateX(-50%) rotate(0deg) translateY(calc(-110px)) rotate(0deg); }
+  to   { transform: translateX(-50%) rotate(360deg) translateY(calc(-110px)) rotate(-360deg); }
+}
+@keyframes orbit2 {
+  from { transform: translateX(-50%) rotate(0deg) translateY(calc(-130px)) rotate(0deg); }
+  to   { transform: translateX(-50%) rotate(360deg) translateY(calc(-130px)) rotate(-360deg); }
+}
+</style>
+ 
+<script>
+let mediaRecorder, audioChunks = [], isListening = false;
+let selectedFile = null;
+let msgCount = 0;
+ 
+const orb = document.getElementById('orb');
+const orbLabel = document.getElementById('orb-label');
+const orbIcon = document.getElementById('orb-icon');
+const statusText = document.getElementById('status-text');
+const waveform = document.getElementById('waveform');
+const micBtn = document.getElementById('mic-btn');
+const chat = document.getElementById('chat-wrap');
+const memList = document.getElementById('memory-list');
+const toolLog = document.getElementById('tool-log');
+ 
+// Build waveform bars
+for (let i = 0; i < 18; i++) {
+  const b = document.createElement('div');
+  b.className = 'wave-bar';
+  b.style.animationDelay = (i * 0.06) + 's';
+  b.style.animationDuration = (0.5 + Math.random() * 0.6) + 's';
+  waveform.appendChild(b);
+}
+ 
+// Clock
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toTimeString().split(' ')[0];
+}
+setInterval(updateClock, 1000);
+updateClock();
+ 
+function setOrbState(state) {
+  orb.className = state || '';
+  micBtn.className = 'btn' + (state === 'listening' ? ' listening' : '');
+  if (state === 'listening') {
+    orbLabel.textContent = 'LISTENING';
+    orbIcon.textContent = 'CLICK TO STOP';
+    statusText.textContent = 'SPEAK NOW...';
+    waveform.classList.add('active');
+  } else if (state === 'thinking') {
+    orbLabel.textContent = 'THINKING';
+    orbIcon.textContent = 'PROCESSING';
+    statusText.textContent = 'PROCESSING...';
+    waveform.classList.remove('active');
+  } else if (state === 'speaking') {
+    orbLabel.textContent = 'SPEAKING';
+    orbIcon.textContent = 'JARVIS LIVE';
+    statusText.textContent = 'JARVIS SPEAKING...';
+    waveform.classList.add('active');
+  } else {
+    orbLabel.textContent = 'ACTIVATE';
+    orbIcon.textContent = 'CLICK TO SPEAK';
+    statusText.textContent = 'STANDBY';
+    waveform.classList.remove('active');
+  }
+}
+ 
+function addLog(text) {
+  const item = document.createElement('div');
+  item.className = 'log-item active';
+  item.textContent = '› ' + text.toUpperCase();
+  toolLog.appendChild(item);
+  setTimeout(() => item.classList.remove('active'), 3000);
+  while (toolLog.children.length > 8) toolLog.removeChild(toolLog.firstChild);
+}
+ 
+const AGENT_STYLES = {
+  jarvis:     { label: "JARVIS",      color: "#00d4ff" },
+  researcher: { label: "RESEARCHER",  color: "#00ff88" },
+  writer:     { label: "WRITER",      color: "#ffd700" },
+  coder:      { label: "CODER",       color: "#ff8c00" },
+  coder_run:  { label: "CODER",       color: "#ff8c00" },
+  security:   { label: "SECURITY",    color: "#ff2d55" },
+};
+
+function addMessage(role, text, agent = "jarvis") {
+  if (memList.children.length === 1 && memList.children[0].textContent === 'No memories yet...') {
+    memList.innerHTML = '';
+  }
+  const mem = document.createElement('div');
+  mem.className = 'mem-item';
+  mem.textContent = (role === 'user' ? '▸ ' : '◂ ') + text.substring(0, 80);
+  memList.appendChild(mem);
+  while (memList.children.length > 5) memList.removeChild(memList.firstChild);
+
+  const div = document.createElement('div');
+  div.className = `msg ${role}`;
+
+  const style = AGENT_STYLES[agent] || AGENT_STYLES.jarvis;
+  const label = role === 'user' ? 'YOU' : style.label;
+  const color = role === 'user' ? 'rgba(255,255,255,0.4)' : style.color;
+
+  const formatted = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (match, lang, code) => {
+    return `<pre style="background:rgba(0,212,255,0.05);border:1px solid rgba(0,212,255,0.15);border-radius:4px;padding:12px;margin:8px 0;overflow-x:auto;font-family:'Courier New',monospace;font-size:0.75rem;line-height:1.5;color:#00ff88;white-space:pre;">${code.trim()}</pre>`;
+  });
+
+  div.innerHTML = `
+    <div class="msg-label" style="color:${color}">${label}</div>
+    <div class="msg-text" style="color:${color};text-shadow:0 0 10px ${color}33">${formatted}</div>
+  `;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+  msgCount++;
+  document.getElementById('mem-count').textContent = msgCount + ' ENTRIES';
+}
+ 
+function setConfidence(pct) {
+  document.getElementById('conf-pct').textContent = pct + '%';
+  document.getElementById('conf-bar').style.width = pct + '%';
+}
+ 
+function handleFileSelect(input) {
+  const file = input.files[0];
+  if (!file) return;
+  selectedFile = file;
+  const preview = document.getElementById('file-preview');
+  preview.textContent = '📄 ' + file.name;
+  preview.classList.add('show');
+  document.getElementById('cap-file').classList.add('on');
+  addLog('FILE LOADED: ' + file.name);
+}
+ 
+function clearChat() {
+  chat.innerHTML = '';
+  msgCount = 0;
+  document.getElementById('mem-count').textContent = '0 ENTRIES';
+}
+ 
+async function sendToServer(formData) {
+  if (window.currentAudio) {
+    window.currentAudio.pause();
+    window.currentAudio = null;
+  }
+  setOrbState('thinking');
+  addLog('SENDING REQUEST');
+
+  try {
+    const res = await fetch('/chat', { method: 'POST', body: formData });
+    const data = await res.json();
+
+    if (data.error) {
+      addMessage('jarvis', 'Error: ' + data.error);
+      setOrbState('');
+      return;
+    }
+
+    if (data.user) addMessage('user', data.user);
+
+    if (data.reply) {
+      addMessage('jarvis', data.reply, data.agent || 'jarvis');
+      addLog('AGENT: ' + (data.agent || 'jarvis').toUpperCase());
+      setConfidence(Math.floor(75 + Math.random() * 20));
+    }
+
+    if (data.tool && data.tool !== 'none') addLog('TOOL: ' + data.tool.toUpperCase());
+
+    if (data.file_path) {
+      const dlBtn = document.createElement('a');
+      dlBtn.className = 'btn';
+      dlBtn.style.cssText = 'margin: 8px auto; display: inline-flex; text-decoration: none; font-size: 0.6rem;';
+      dlBtn.textContent = '⬇ DOWNLOAD FILE';
+      dlBtn.href = '/download?path=' + encodeURIComponent(data.file_path);
+      chat.appendChild(dlBtn);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    selectedFile = null;
+    document.getElementById('file-preview').classList.remove('show');
+    document.getElementById('cap-file').classList.remove('on');
+
+    if (data.audio) {
+      const bytes = Uint8Array.from(atob(data.audio), c => c.charCodeAt(0));
+      const blob = new Blob([bytes], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      window.currentAudio = audio;
+      setOrbState('speaking');
+      audio.play();
+      audio.onended = () => { window.currentAudio = null; setOrbState(''); };
+      audio.onerror = () => { window.currentAudio = null; setOrbState(''); };
+    } else {
+      setOrbState('');
+    }
+
+  } catch (err) {
+    addMessage('jarvis', 'Connection error. Is the server running?');
+    addLog('ERROR: CONNECTION FAILED');
+    setOrbState('');
+  }
+}
+ 
+async function toggleListen() {
+  // If speaking, stop audio and start listening
+  if (window.currentAudio) {
+    window.currentAudio.pause();
+    window.currentAudio = null;
+    setOrbState('');
+  }
+
+  if (isListening) {
+    mediaRecorder.stop();
+    isListening = false;
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream);
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      const formData = new FormData();
+      formData.append('audio', blob, 'audio.webm');
+      if (selectedFile) formData.append('file', selectedFile);
+      stream.getTracks().forEach(t => t.stop());
+      await sendToServer(formData);
+    };
+    mediaRecorder.start();
+    isListening = true;
+    setOrbState('listening');
+    addLog('MICROPHONE ACTIVE');
+  } catch (err) {
+    statusText.textContent = 'MIC ACCESS DENIED';
+  }
+}
+ 
+async function sendText() {
+  const input = document.getElementById('textinput');
+  const text = input.value.trim();
+  if (!text && !selectedFile) return;
+  input.value = '';
+  const formData = new FormData();
+  if (text) formData.append('text', text);
+  if (selectedFile) formData.append('file', selectedFile);
+  if (!text && selectedFile) formData.append('text', 'Analyse this file for me.');
+  await sendToServer(formData);
+}
+</script>
+</body>
+</html>
