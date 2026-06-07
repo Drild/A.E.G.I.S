@@ -147,9 +147,19 @@ async def chat_endpoint(
         return JSONResponse({"error": "No input received."})
 
     tool, argument, reply, agent = chat(user_input)
-    print(f"DEBUG — agent: {agent}, tool: {tool}, argument: {argument}")
+    
+    # Check for news data BEFORE clean_reply
+    news_data = None
+    if reply.startswith("NEWS:"):
+        try:
+            news_data = json.loads(reply[5:])
+            reply = "Here are the latest headlines."
+        except:
+            pass
+    
     reply = clean_reply(reply)
-
+    print(f"DEBUG — agent: {agent}, tool: {tool}, news: {news_data is not None}, reply_start: {reply[:30]}")
+    
     file_path = None
     if tool and tool != "none":
         result = execute_tool(tool, argument)
@@ -169,7 +179,8 @@ async def chat_endpoint(
         "tool": tool,
         "agent": agent,
         "audio": audio_b64,
-        "file_path": file_path
+        "file_path": file_path,
+        "news" : news_data
     })
 
 @app.get("/download")

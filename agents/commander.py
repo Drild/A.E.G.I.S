@@ -16,6 +16,7 @@ Agents available:
 - coder_run: Execute code and see output — "calculate", "compute", "run", "what is the result of"
 - security: Cybersecurity questions, vulnerabilities, CTF challenges, network security
 - aegis: General chat, weather, music, tools, file operations, screen analysis, time
+- finance: Stock market analysis, price predictions, market trends. Use for "analyse [stock]", "stock price", "forecast [company]", "bullish", "bearish", "predict", "market"
 
 Respond ONLY with valid JSON:
 {
@@ -31,6 +32,8 @@ def route(user_message: str) -> str:
     weather_words = ["weather", "temperature", "raining", "forecast", "hot outside", "cold outside", "sunny", "cloudy", "wind"]
     music_words = ["play ", "pause music", "skip track", "next song", "previous song", "what's playing", "spotify"]
     tool_words = ["open ", "launch ", "what time", "write a note", "screenshot", "my screen", "save as pdf", "save as doc", "download file"]
+    finance_words = ["stock", "share price", "market", "bullish", "bearish", "predict", "forecast", "analyse", "analyze", "nasdaq", "nyse", "crypto", "bitcoin", "ethereum"]
+
 
     if any(w in msg for w in weather_words):
         return "aegis"
@@ -38,6 +41,10 @@ def route(user_message: str) -> str:
         return "aegis"
     if any(w in msg for w in tool_words):
         return "aegis"
+    if any(w in msg for w in finance_words):
+        return "finance"
+
+
 
     # Let LLM decide for everything else
     try:

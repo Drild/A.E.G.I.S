@@ -6,9 +6,10 @@ from agents.researcher import research
 from agents.writer import write
 from agents.coder import code
 from agents.security import security_analysis
+from agents.finance import analyse_stock
 
 SYSTEM_PROMPT = """
-You are Aegis, a highly capable personal AI assistant.
+You are A.E.G.I.S (Autonomous Expert Guardian Intelligence System), a highly capable personal AI assistant.
 You are concise, intelligent, and helpful.
 
 CRITICAL RULES:
@@ -17,8 +18,8 @@ CRITICAL RULES:
 - Never tell the user you don't have access to a file they uploaded — it will always be included in their message.
 - "play [song/artist]" ALWAYS means use the play_song tool. Never use current_track for play commands.
 - If the user says ONLY "play [song]", ALWAYS use play_song immediately.
-- If the previous message was about a song and the user says "play [song]", they want to change the song.
 - NEVER use search_web for weather questions. ALWAYS use get_weather or get_weather_detailed tools instead.
+- When saving files, the argument must contain ONLY the raw content to save. No preamble, no explanations.
 
 You have access to the following tools:
 - open_app: Opens an application.
@@ -31,12 +32,12 @@ You have access to the following tools:
 - previous_track: Goes to previous track.
 - current_track: Returns what's currently playing.
 - analyse_screen: Takes a screenshot and analyses it.
-- save_txt: Saves a text file. Argument = ONLY the raw content, no preamble.
-- save_docx: Saves a Word document. Argument = ONLY the raw content, no preamble.
-- save_pdf: Saves a PDF. Argument = ONLY the raw content, no preamble.
+- get_weather: Gets current weather. Argument = city name.
+- get_weather_detailed: Gets detailed weather info.
+- save_txt: Saves a text file. Argument = ONLY the raw content.
+- save_docx: Saves a Word document. Argument = ONLY the raw content.
+- save_pdf: Saves a PDF. Argument = ONLY the raw content.
 - none: No tool needed, just reply normally.
-- get_weather: Gets current weather. Argument = city name. Use for "what's the weather", "is it raining", "how cold is it".
-- get_weather_detailed: Gets detailed weather info. Use for "detailed weather", "full forecast".
 
 You must ALWAYS respond in this exact JSON format:
 {
@@ -45,42 +46,104 @@ You must ALWAYS respond in this exact JSON format:
   "reply": "your spoken response to the user"
 }
 
-When saving files, the argument must contain ONLY the raw content to save. No preamble, no explanations. Just the content itself.
 No extra text. Only valid JSON.
 """
 
-conversation_history = []
+# Separate conversation histories per agent
+conversation_histories = {
+    "aegis": [],
+    "researcher": [],
+    "writer": [],
+    "coder": [],
+    "security": [],
+    "finance": [],
+}
+
+last_agent = "aegis"
+
+def get_agent_context(agent: str, user_message: str) -> str:
+    """Build context from agent's conversation history."""
+    history = conversation_histories.get(agent, [])
+    if not history:
+        return ""
+    # Last 6 exchanges for context
+    recent = history[-6:]
+    context = "\n".join([f"{m['role'].upper()}: {m['content'][:200]}" for m in recent])
+    return f"\nPrevious conversation context:\n{context}\n"
+
+def add_to_history(agent: str, role: str, content: str):
+    if agent not in conversation_histories:
+        conversation_histories[agent] = []
+    conversation_histories[agent].append({"role": role, "content": content})
+    # Keep last 20 messages per agent
+    if len(conversation_histories[agent]) > 20:
+        conversation_histories[agent] = conversation_histories[agent][-20:]
 
 def chat(user_message: str) -> tuple[str, str, str, str]:
+    global last_agent
     memories = search_memory(user_message)
     memory_block = f"\nRelevant past conversations:\n{memories}\n" if memories else ""
 
-    # Route to specialist agent if needed
     agent = route(user_message)
 
+    # Follow-up detection — continue with last agent
+    followup_phrases = [
+        "more", "tell me more", "can i get", "give me more", "and also",
+        "what about", "how about", "continue", "go on", "yes", "sure",
+        "ok", "okay", "sounds good", "great", "thanks", "explain more",
+        "elaborate", "expand", "another", "5 more", "10 more"
+    ]
+    msg_lower = user_message.lower().strip()
+    is_followup = (
+        len(user_message.split()) <= 6 or
+        any(phrase in msg_lower for phrase in followup_phrases)
+    )
+
+    if is_followup and last_agent != "aegis":
+        agent = last_agent
+
+    last_agent = agent
+
+    # Add user message to agent history
+    add_to_history(agent, "user", user_message)
+
+    # Get agent-specific context
+    context = get_agent_context(agent, user_message)
+    full_message = f"{context}{user_message}" if context else user_message
+
     if agent == "researcher":
-        reply = research(user_message)
+        reply = research(full_message)
+        add_to_history(agent, "assistant", reply)
         return "none", "", reply, "researcher"
 
     elif agent == "writer":
-        reply = write(user_message)
+        reply = write(full_message)
+        add_to_history(agent, "assistant", reply)
         return "none", "", reply, "writer"
 
     elif agent == "coder":
-        reply = code(user_message)
+        reply = code(full_message)
+        add_to_history(agent, "assistant", reply)
         return "none", "", reply, "coder"
 
     elif agent == "coder_run":
         from agents.coder import run_code
-        reply = run_code(user_message)
+        reply = run_code(full_message)
+        add_to_history(agent, "assistant", reply)
         return "none", "", reply, "coder_run"
 
     elif agent == "security":
-        reply = security_analysis(user_message)
+        reply = security_analysis(full_message)
+        add_to_history(agent, "assistant", reply)
         return "none", "", reply, "security"
 
-    # Default: Aegis handles it with tool calling
-    conversation_history.append({
+    elif agent == "finance":
+        reply = analyse_stock(full_message)
+        add_to_history(agent, "assistant", reply)
+        return "none", "", reply, "finance"
+
+    # Default: A.E.G.I.S handles with tool calling
+    conversation_histories["aegis"].append({
         "role": "user",
         "content": user_message
     })
@@ -90,15 +153,19 @@ def chat(user_message: str) -> tuple[str, str, str, str]:
         options={"temperature": 0.1},
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT + memory_block}
-        ] + conversation_history
+        ] + conversation_histories["aegis"]
     )
 
     raw = response["message"]["content"].strip()
 
-    conversation_history.append({
+    conversation_histories["aegis"].append({
         "role": "assistant",
         "content": raw
     })
+
+    # Keep aegis history trimmed
+    if len(conversation_histories["aegis"]) > 20:
+        conversation_histories["aegis"] = conversation_histories["aegis"][-20:]
 
     try:
         start = raw.index("{")
@@ -112,4 +179,5 @@ def chat(user_message: str) -> tuple[str, str, str, str]:
         argument = ""
         reply = raw
 
+    add_to_history("aegis", "assistant", reply)
     return tool, argument, reply, "aegis"
