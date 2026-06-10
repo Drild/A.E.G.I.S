@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Form, Query
+from fastapi import FastAPI, UploadFile, File, Form, Query, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
 from brain.llm import chat
@@ -6,6 +6,9 @@ from memory.remember import save_memory
 from tools.executor import execute_tool
 from tools.file_writer import save_text_file, save_docx, save_pdf, save_markdown, OUTPUT_DIR
 from voice.wakeword import start_wake_word_listener
+from database import (init_db, create_chat, get_chats, get_chat,
+                      get_messages, add_message, rename_chat,
+                      delete_chat, auto_title)
 import subprocess
 import tempfile
 import os
@@ -14,22 +17,25 @@ import base64
 import fitz
 import threading
 
+
 app = FastAPI()
 
 wake_triggered = False
 uploaded_file_cache = {}
 
-PIPER_EXE = r"C:\piper\piper\piper.exe"
+PIPER_EXE   = r"C:\piper\piper\piper.exe"
 PIPER_MODEL = r"C:\piper\piper\voices\en_US-lessac-medium.onnx"
-FFMPEG = r"C:\ffmpeg\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
+FFMPEG      = r"C:\ffmpeg\ffmpeg-master-latest-win64-gpl\bin\ffmpeg.exe"
 
 os.environ["PATH"] += r";C:\ffmpeg\ffmpeg-master-latest-win64-gpl\bin"
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+
 @app.get("/")
 def root():
     return FileResponse("static/index.html")
+
 
 @app.get("/wake-status")
 async def wake_status():
@@ -38,8 +44,10 @@ async def wake_status():
     wake_triggered = False
     return JSONResponse({"triggered": triggered})
 
+
 @app.on_event("startup")
 async def startup():
+    init_db()
     def on_wake_word():
         global wake_triggered
         wake_triggered = True
@@ -49,13 +57,14 @@ async def startup():
         daemon=True
     ).start()
 
+
 def extract_file_content(file_bytes: bytes, filename: str) -> str:
     ext = filename.lower().split(".")[-1]
     if ext == "pdf":
         with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as f:
             f.write(file_bytes)
             tmp = f.name
-        doc = fitz.open(tmp)
+        doc  = fitz.open(tmp)
         text = "".join(page.get_text() for page in doc)
         doc.close()
         os.unlink(tmp)
@@ -63,7 +72,7 @@ def extract_file_content(file_bytes: bytes, filename: str) -> str:
     elif ext in ["png", "jpg", "jpeg"]:
         import ollama
         image_b64 = base64.b64encode(file_bytes).decode()
-        response = ollama.chat(
+        response  = ollama.chat(
             model="llava",
             messages=[{
                 "role": "user",
@@ -76,13 +85,14 @@ def extract_file_content(file_bytes: bytes, filename: str) -> str:
         return file_bytes.decode("utf-8", errors="ignore")[:6000]
     return ""
 
+
 def clean_reply(reply: str) -> str:
     reply = reply.strip()
     if "{" in reply:
         try:
             start = reply.index("{")
             try:
-                end = reply.rindex("}") + 1
+                end    = reply.rindex("}") + 1
                 parsed = json.loads(reply[start:end])
                 return parsed.get("reply", reply)
             except Exception:
@@ -98,6 +108,7 @@ def clean_reply(reply: str) -> str:
             pass
     return reply
 
+
 def generate_tts(text: str) -> str:
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as out:
         out_path = out.name
@@ -109,12 +120,53 @@ def generate_tts(text: str) -> str:
     os.unlink(out_path)
     return base64.b64encode(audio_bytes).decode()
 
+
+# ── CHAT SESSIONS ──
+
+@app.get("/chats")
+def list_chats():
+    return JSONResponse(get_chats())
+
+
+@app.post("/chats")
+def new_chat():
+    chat_id = create_chat()
+    return JSONResponse({"id": chat_id, "title": "New Chat"})
+
+
+@app.get("/chats/{chat_id}")
+def load_chat(chat_id: int):
+    chat_row = get_chat(chat_id)
+    if not chat_row:
+        return JSONResponse({"error": "Chat not found"})
+    messages = get_messages(chat_id)
+    return JSONResponse({"chat": chat_row, "messages": messages})
+
+
+@app.put("/chats/{chat_id}")
+async def update_chat(chat_id: int, request: Request):
+    data = await request.json()
+    if "title" in data:
+        rename_chat(chat_id, data["title"])
+    return JSONResponse({"success": True})
+
+
+@app.delete("/chats/{chat_id}")
+def remove_chat(chat_id: int):
+    delete_chat(chat_id)
+    return JSONResponse({"success": True})
+
+
+# ── MAIN CHAT ENDPOINT ──
+
 @app.post("/chat")
 async def chat_endpoint(
-    audio: UploadFile = File(None),
-    file: UploadFile = File(None),
-    text: str = Form(None)
+    audio:   UploadFile = File(None),
+    file:    UploadFile = File(None),
+    text:    str        = Form(None),
+    chat_id: str        = Form(None)   # string — JS FormData always sends strings
 ):
+    # ── Transcribe audio or use text ──
     if audio:
         import whisper
         with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as tmp:
@@ -125,16 +177,17 @@ async def chat_endpoint(
             FFMPEG, "-y", "-i", tmp_path,
             "-ar", "16000", "-ac", "1", wav_path
         ], capture_output=True)
-        model = whisper.load_model("small")
-        result = model.transcribe(wav_path, language="en")
+        model      = whisper.load_model("small")
+        result     = model.transcribe(wav_path, language="en")
         user_input = result["text"].strip()
         os.unlink(tmp_path)
         os.unlink(wav_path)
     else:
         user_input = text or ""
 
+    # ── Attach uploaded file content ──
     if file and file.filename:
-        file_bytes = await file.read()
+        file_bytes   = await file.read()
         file_context = extract_file_content(file_bytes, file.filename)
         if file_context:
             uploaded_file_cache[file.filename] = file_context
@@ -146,20 +199,22 @@ async def chat_endpoint(
     if not user_input.strip():
         return JSONResponse({"error": "No input received."})
 
+    # ── LLM ──
     tool, argument, reply, agent = chat(user_input)
-    
-    # Check for news data BEFORE clean_reply
+
+    # ── News handling ──
     news_data = None
     if reply.startswith("NEWS:"):
         try:
             news_data = json.loads(reply[5:])
-            reply = "Here are the latest headlines."
-        except:
+            reply     = "Here are the latest headlines."
+        except Exception:
             pass
-    
+
     reply = clean_reply(reply)
-    print(f"DEBUG — agent: {agent}, tool: {tool}, news: {news_data is not None}, reply_start: {reply[:30]}")
-    
+    print(f"DEBUG — agent: {agent}, tool: {tool}, news: {news_data is not None}, reply_start: {reply[:60]}")
+
+    # ── Tool execution ──
     file_path = None
     if tool and tool != "none":
         result = execute_tool(tool, argument)
@@ -169,19 +224,30 @@ async def chat_endpoint(
             reply = result
 
     save_memory(user_input[:200], reply)
-
-    audio_b64 = generate_tts(reply)
+    audio_b64     = generate_tts(reply)
     display_input = user_input.split("\n\n[")[0]
 
+    # ── Persist to database ──
+    chat_id_int = int(chat_id) if chat_id and chat_id.isdigit() else None
+    if chat_id_int:
+        if display_input:
+            chat_row = get_chat(chat_id_int)
+            if chat_row and chat_row["title"] == "New Chat":
+                rename_chat(chat_id_int, auto_title(display_input))
+            add_message(chat_id_int, "user", display_input, agent)
+        if reply:
+            add_message(chat_id_int, "assistant", reply, agent)
+
     return JSONResponse({
-        "user": display_input[:300],
-        "reply": reply,
-        "tool": tool,
-        "agent": agent,
-        "audio": audio_b64,
+        "user":      display_input[:300],
+        "reply":     reply,
+        "tool":      tool,
+        "agent":     agent,
+        "audio":     audio_b64,
         "file_path": file_path,
-        "news" : news_data
+        "news":      news_data
     })
+
 
 @app.get("/download")
 def download_file(path: str = Query(...)):
