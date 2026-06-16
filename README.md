@@ -1,158 +1,249 @@
-# A.E.G.I.S
-### AUTONOMOUS EXPERT GUARDIAN INTELLIGENCE SYSTEM
+<div align="center">
 
-A fully local, multi-agent AI assistant with voice interaction, Spotify control, screen vision, file generation, and real-time code execution. Built entirely in Python, running on-device with no cloud API costs.
+<h1>
+  <img src="https://img.shields.io/badge/A.E.G.I.S-Autonomous%20Expert%20Guardian%20Intelligence%20System-00d4ff?style=for-the-badge&labelColor=020408&color=00d4ff" alt="A.E.G.I.S"/>
+</h1>
 
+<p>
+  <strong>A fully local, multi-agent AI assistant — built from scratch with Python, FastAPI, and Ollama.</strong><br/>
+  Voice-activated. GPU-accelerated. No cloud. No subscriptions. Runs entirely on your machine.
+</p>
 
----
+<p>
+  <img src="https://img.shields.io/badge/Python-3.11-00d4ff?style=flat-square&logo=python&logoColor=white&labelColor=020408"/>
+  <img src="https://img.shields.io/badge/FastAPI-0.115-00d4ff?style=flat-square&logo=fastapi&logoColor=white&labelColor=020408"/>
+  <img src="https://img.shields.io/badge/Ollama-LLaMA%203.1%208B-00d4ff?style=flat-square&labelColor=020408"/>
+  <img src="https://img.shields.io/badge/NVIDIA-GPU%20Accelerated-00d4ff?style=flat-square&logo=nvidia&logoColor=white&labelColor=020408"/>
+  <img src="https://img.shields.io/badge/Local-No%20Cloud-00ff88?style=flat-square&labelColor=020408"/>
+</p>
 
-## Features
+<p>
+  <a href="#-demo">Demo</a> •
+  <a href="#-features">Features</a> •
+  <a href="#-architecture">Architecture</a> •
+  <a href="#-setup">Setup</a> •
+  <a href="#-tech-stack">Tech Stack</a>
+</p>
 
-| Feature | Description |
-|---|---|
-| 🎤 Voice Input | Whisper STT — speak naturally, Jarvis transcribes |
-| 🔊 Voice Output | Piper TTS — fully local, natural-sounding responses |
-| 🧠 Multi-Agent System | Commander routes requests to specialist agents |
-| 🔍 Researcher Agent | Web search via DuckDuckGo + LLM synthesis |
-| ✍️ Writer Agent | Documents, emails, CVs, reports |
-| 💻 Coder Agent | Writes and executes Python code live |
-| 🔒 Security Agent | Cybersecurity education and analysis |
-| 🎵 Spotify Control | Play songs, artists, moods via voice |
-| 👁️ Screen Vision | LLaVA analyses your screen on demand |
-| 📄 File Generation | Creates downloadable PDF, DOCX, TXT files |
-| 📎 File Upload | Upload PDFs/images for Jarvis to analyse |
-| 🧬 Persistent Memory | ChromaDB vector store remembers past conversations |
+> ⚠️ **Note:** A GIF demo will be added here shortly. See [Features](#-features) for a full breakdown.
 
----
-
-## Architecture
-
-User (Voice/Text)
-↓
-FastAPI Server
-↓
-Commander Agent  ──→  routes to specialist
-↓
-┌──────────────────────────────────────┐
-│  Researcher │ Writer │ Coder │ Security │
-└──────────────────────────────────────┘
-↓
-Tool Executor (Spotify, Apps, Files, Vision)
-↓
-Piper TTS → Audio Response
-
-
+</div>
 
 ---
 
-## Tech Stack
+## What is A.E.G.I.S?
 
-| Component | Technology |
-|---|---|
-| LLM | Llama 3.1 8B via Ollama |
-| Vision | LLaVA via Ollama |
-| Speech-to-Text | OpenAI Whisper |
-| Text-to-Speech | Piper TTS |
-| Memory | ChromaDB + sentence-transformers |
-| Backend | FastAPI + Uvicorn |
-| Frontend | Vanilla HTML/CSS/JS |
-| Music | Spotify Web API |
-| Search | DuckDuckGo (ddgs) |
+A.E.G.I.S is a personal AI assistant that runs **entirely locally** — no OpenAI, no API keys, no data leaving your machine. It uses a **multi-agent architecture** where a Commander agent routes your requests to specialist agents (Researcher, Writer, Coder, Security, Finance), each with their own conversation history and system prompt.
+
+Built as a portfolio project by a first-year Computer Science (Cybersecurity) student at Newcastle University, it demonstrates real-world integration of LLMs, speech processing, vector memory, and full-stack web development.
 
 ---
 
-## Setup
+## ✨ Features
+
+### 🤖 Multi-Agent Intelligence
+A Commander agent analyses every input and routes it to the most capable specialist:
+
+| Agent | Role | Capability |
+|-------|------|------------|
+| **Commander** | Core routing + tool use | Handles tool calls, orchestrates all agents |
+| **Researcher** | Web intelligence | Live search via DuckDuckGo, summarisation |
+| **Writer** | Document generation | PDF, DOCX, TXT creation and download |
+| **Coder** | Code assistance | Generation, explanation, debugging |
+| **Security** | Cybersecurity analysis | Threat analysis, CVE lookup, security advice |
+| **Finance (Kronos)** | Financial AI | Stock analysis, market predictions |
+
+### 🎙️ Voice I/O
+- **Wake word detection** — say *"Hey Jarvis"* to activate hands-free
+- **Whisper STT** — OpenAI Whisper (local) for accurate speech-to-text
+- **Auto-stop silence detection** — stops recording automatically after speech ends
+- **Piper TTS** — fast, natural-sounding text-to-speech, fully offline
+
+### 🧠 Persistent Memory
+- **ChromaDB** vector store for semantic long-term memory
+- Relevant past conversations are automatically recalled and injected as context
+- **SQLite** chat history with full session management (rename, delete, search)
+
+### 🛠️ Tools & Integrations
+- **Spotify control** — play songs, artists, moods, skip, pause via natural language
+- **Weather** — real-time forecasts via `wttr.in`
+- **Screen vision** — LLaVA multimodal model analyses your screen on demand
+- **File upload** — attach PDFs, images, and text files for analysis
+- **File generation** — create and download PDFs, Word documents, and text files
+- **Web search** — DuckDuckGo search with live news feed panel
+- **System stats** — live CPU, RAM, disk, and network monitoring
+
+### 🖥️ Iron Man-Inspired UI
+- Fully custom HTML/CSS/JS frontend — no frameworks
+- Arc reactor orb with orbital animations and state-aware pulse effects
+- Real-time system stats with animated fill bars
+- Live agent status panel showing which agent handled each request
+- Particle background, scanline overlay, corner brackets
+- Persistent chat sidebar with search and session management
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    FastAPI Backend                        │
+│                      server.py                           │
+└──────────┬──────────────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────┐
+│                  brain/llm.py                            │
+│           LLM Router + Tool Call Parser                  │
+│         (Ollama → LLaMA 3.1 8B local)                   │
+└──────────┬──────────────────────────────────────────────┘
+           │
+           ▼ route()
+┌──────────────────────────────────────────────────────────┐
+│              agents/commander.py                          │
+│    Classifies intent → selects specialist agent          │
+└───┬──────┬────────┬──────────┬───────────┬──────────────┘
+    │      │        │          │           │
+    ▼      ▼        ▼          ▼           ▼
+researcher writer  coder   security    finance
+(ddgs)   (docx/   (code    (analysis)  (Kronos)
+          pdf)    exec)
+           │
+           ▼
+┌─────────────────────────────────────────────────────────┐
+│                   tools/                                  │
+│  executor · spotify · weather · file_writer              │
+└─────────────────────────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────┐
+│               memory/ + database.py                       │
+│         ChromaDB (vector)  +  SQLite (history)           │
+└─────────────────────────────────────────────────────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────┐
+│               voice/                                      │
+│     Whisper STT  ·  Piper TTS  ·  openwakeword           │
+└─────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📁 Project Structure
+
+```
+jarvis/
+├── server.py              # FastAPI app — all endpoints
+├── database.py            # SQLite chat history
+├── brain/
+│   └── llm.py             # LLM routing, tool parsing, agent dispatch
+├── agents/
+│   ├── commander.py       # Intent classification + routing
+│   ├── researcher.py      # Web search agent
+│   ├── writer.py          # Document generation agent
+│   ├── coder.py           # Code generation + execution
+│   ├── security.py        # Cybersecurity analysis agent
+│   └── finance.py         # Kronos finance agent
+├── tools/
+│   ├── executor.py        # Tool dispatcher
+│   ├── spotify.py         # Spotify integration (spotipy)
+│   ├── weather.py         # Weather via wttr.in
+│   └── file_writer.py     # PDF / DOCX / TXT generation
+├── voice/
+│   ├── listener.py        # Whisper STT
+│   └── wakeword.py        # openwakeword detection
+├── vision/
+│   └── screen.py          # Screenshot + LLaVA analysis
+├── memory/
+│   └── remember.py        # ChromaDB vector memory
+└── static/
+    └── index.html         # Full frontend UI
+```
+
+---
+
+## ⚙️ Setup
 
 ### Prerequisites
+- Windows 10/11 with NVIDIA GPU (tested on RTX series)
 - Python 3.11+
-- [Ollama](https://ollama.com) installed
-- [Piper TTS](https://github.com/rhasspy/piper) installed
-- [FFmpeg](https://ffmpeg.org) installed
-- Spotify Premium account
+- [Ollama](https://ollama.com/download) installed and running
+- [Piper TTS](https://github.com/rhasspy/piper) with `en_US-lessac-medium` voice model
+- [FFmpeg](https://ffmpeg.org/download.html) on PATH
+- Spotify Premium account (for Spotify features)
 
 ### Installation
 
-```bash
-# Clone the repo
-git clone https://github.com/Drild/jarvis.git
-cd aegis
+```powershell
+# 1. Clone the repo
+git clone https://github.com/Drild/A.E.G.I.S.git
+cd A.E.G.I.S
 
-# Create virtual environment
+# 2. Create and activate virtual environment
 python -m venv venv
 venv\Scripts\activate
 
-# Install dependencies
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# Pull AI models
+# 4. Pull required Ollama models
 ollama pull llama3.1:8b
 ollama pull llava
-ollama pull whisper
-```
 
-### Configuration
+# 5. Start Ollama (in a separate terminal)
+ollama serve
 
-Create a `.env` file in the root directory:
-
-```env
-SPOTIFY_CLIENT_ID=your_client_id
-SPOTIFY_CLIENT_SECRET=your_client_secret
-```
-
-### Run
-
-```bash
+# 6. Start A.E.G.I.S
 uvicorn server:app --reload
 ```
 
-Open `http://localhost:8000` in your browser.
+Then open `http://127.0.0.1:8000` in your browser.
+
+### Spotify Setup
+Create a `.env` file in the project root:
+```env
+SPOTIPY_CLIENT_ID=your_client_id
+SPOTIPY_CLIENT_SECRET=your_client_secret
+SPOTIPY_REDIRECT_URI=http://localhost:8888/callback
+```
+Get credentials from the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard).
 
 ---
 
-## Project Structure
+## 🧰 Tech Stack
 
-aegis/
-├── server.py          # FastAPI backend
-├── main.py            # Terminal interface
-├── brain/
-│   └── llm.py         # LLM + agent routing
-├── agents/
-│   ├── commander.py   # Routes to specialist agents
-│   ├── researcher.py  # Web search agent
-│   ├── writer.py      # Writing agent
-│   ├── coder.py       # Code generation + execution
-│   └── security.py    # Cybersecurity agent
-├── tools/
-│   ├── executor.py    # Tool dispatcher
-│   ├── spotify.py     # Spotify integration
-│   └── file_writer.py # PDF/DOCX/TXT generation
-├── voice/
-│   └── listener.py    # Whisper STT
-├── vision/
-│   └── screen.py      # Screen capture + LLaVA
-├── memory/
-│   └── remember.py    # ChromaDB vector memory
-└── static/
-└── index.html     # Web UI
-
+| Layer | Technology |
+|-------|------------|
+| **LLM** | Ollama · LLaMA 3.1 8B · LLaVA |
+| **Backend** | Python · FastAPI · Uvicorn |
+| **Speech** | OpenAI Whisper (local) · Piper TTS · openwakeword |
+| **Memory** | ChromaDB · SQLite |
+| **Tools** | spotipy · psutil · ddgs · wttr.in · PyMuPDF · python-docx |
+| **Frontend** | Vanilla HTML/CSS/JS (no frameworks) |
+| **Hardware** | NVIDIA GPU (CUDA accelerated) |
 
 ---
 
-## CV Bullet Points
+## 🔒 Privacy
 
-Built a fully local multi-agent AI assistant in Python featuring voice I/O,
-real-time code execution, Spotify control, screen vision, and persistent memory
-Designed a Commander-Agent architecture routing user requests to specialist
-agents (Researcher, Writer, Coder, Security) using Llama 3.1 8B via Ollama
-Integrated ChromaDB vector embeddings for semantic long-term memory,
-Whisper STT, Piper TTS, and LLaVA for multimodal screen analysis
-Built a FastAPI backend with a custom Jarvis-themed web UI supporting
-file upload, PDF/DOCX generation, and Spotify Web API playback control
+Everything runs locally. No data is sent to any external server except:
+- `wttr.in` for weather queries
+- `duckduckgo.com` for web searches (when explicitly requested)
+- Spotify API for music control (requires your own credentials)
 
+Your conversations, files, and voice input never leave your machine.
 
 ---
 
-## Author
+## 👤 Author
 
-**Drilden Deluc** — First Year Computer Science, Newcastle University  
-[GitHub](https://github.com/Drild)
+**Drilden** — First-year BSc Computer Science (Cybersecurity) student at Newcastle University.
+
+[![GitHub](https://img.shields.io/badge/GitHub-Drild-00d4ff?style=flat-square&logo=github&labelColor=020408)](https://github.com/Drild)
+
+---
+
+<div align="center">
+  <sub>Built with Python · Powered by local LLMs · Inspired by Iron Man</sub>
+</div>
